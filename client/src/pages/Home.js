@@ -1,59 +1,110 @@
 import React, { useEffect, useState } from "react";
 import TaskBoard from "../components/TaskBoard";
-import TaskModal from "../components/TaskModal"; // Import the TaskModal
+import TaskModal from "../components/TaskModal";
 import taskService from "../services/taskService";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import logout_icon from "../icons/logout_icon.svg";
+
+const Header = ({ onLogout }) => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="header">
+      <h2>Task Management System</h2>
+      <div className="header-buttons">
+        <button
+          className="create-task-button"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <span className="create-task-icon">+</span>
+          <span className="create-task-text">Create Task</span>
+        </button>
+        <button className="btn-logout" onClick={onLogout}>
+          <img
+            src={logout_icon}
+            alt="Logout Icon"
+            className="logout-icon" 
+          />
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
   const [columns, setColumns] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
-  const [editTask, setEditTask] = useState(null); // State to store the task being edited
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editTask, setEditTask] = useState(null);
+  const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    toast.success("Logged out successfully.");
+    navigate("/login");
+  };
   useEffect(() => {
     const fetchTasks = async () => {
-      const tasks = await taskService.getTasks();
-      console.log("tasks--->", tasks);
-      const formattedColumns = [
-        {
-          id: "todo",
-          title: "To Do",
-          tasks: tasks.filter((task) => task.column === "todo"),
-        },
-        {
-          id: "in-progress",
-          title: "In Progress",
-          tasks: tasks.filter((task) => task.column === "in-progress"),
-        },
-        {
-          id: "done",
-          title: "Done",
-          tasks: tasks.filter((task) => task.column === "done"),
-        },
-      ];
-      setColumns(formattedColumns);
+      try {
+        const tasks = await taskService.getTasks();
+        console.log(tasks, "tasks");
+        if (tasks.message === "Invalid token") {
+          toast.error("Session expired. Please log in again.");
+          navigate("/login");
+        } else {
+          const formattedColumns = [
+            {
+              id: "todo",
+              title: "To Do",
+              tasks: tasks.data.filter((task) => task.column === "todo"),
+            },
+            {
+              id: "in-progress",
+              title: "In Progress",
+              tasks: tasks.data.filter((task) => task.column === "in-progress"),
+            },
+            {
+              id: "done",
+              title: "Done",
+              tasks: tasks.data.filter((task) => task.column === "done"),
+            },
+            {
+              id: "blocked",
+              title: "Blocked",
+              tasks: tasks.data.filter((task) => task.column === "blocked"),
+            },
+            {
+              id: "code-review",
+              title: "Code Review",
+              tasks: tasks.data.filter((task) => task.column === "code-review"),
+            },
+          ];
+          setColumns(formattedColumns);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     };
-
     fetchTasks();
   }, []);
 
   const handleTaskCreated = async (taskData) => {
     const newTask = await taskService.createTask(taskData);
-    const updatedColumns = [...columns];
-    updatedColumns[0].tasks.push(newTask); // Add new task to the "To Do" column
+    const updatedColumns = columns.map((col) => {
+      if (col.id === "todo") {
+        return {
+          ...col,
+          tasks: [...col.tasks, newTask],
+        };
+      }
+      return col;
+    });
     setColumns(updatedColumns);
   };
-
-  const handleTaskEdit = async (task) => {
-    // Open the modal with task details for editing
-    setEditTask(task);
-    setIsModalOpen(true);
-  };
-
   const handleTaskUpdated = async (updatedTask) => {
     try {
-      // Update the task in the backend
       await taskService.updateTask(updatedTask._id, updatedTask);
-
-      // Update the columns in the state
       const updatedColumns = columns.map((col) => ({
         ...col,
         tasks: col.tasks.map((task) =>
@@ -61,70 +112,57 @@ const Home = () => {
         ),
       }));
       setColumns(updatedColumns);
-      toast.success("Task updated successfully");
     } catch (error) {
       toast.error("Failed to update task");
     }
   };
-
-  const handleTaskDelete = async (taskId) => {
-    try {
-      await taskService.deleteTask(taskId);
-      // Remove the deleted task from the state
-      const updatedColumns = columns.map((col) => ({
-        ...col,
-        tasks: col.tasks.filter((task) => task._id !== taskId),
-      }));
-      setColumns(updatedColumns);
-      toast.success("Task deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete task");
-    }
+  const handleTaskEdit = (task) => {
+    setEditTask(task); 
+    setIsModalOpen(true); 
+  };
+  const handleOpenEditModal = (task) => {
+    setEditTask(task);
+    setIsModalOpen(true);
   };
 
-  const handleDragEnd = async (result) => {
-    const { source, destination, draggableId } = result;
-    if (!destination) return;
-    const updatedColumns = [...columns];
-    const [removed] = updatedColumns[source.droppableId].tasks.splice(
-      source.index,
-      1
-    );
-    updatedColumns[destination.droppableId].tasks.splice(
-      destination.index,
-      0,
-      removed
-    );
-
+  const handleTaskDeleted = async (taskId) => {
+    await taskService.deleteTask(taskId);
+    const updatedColumns = columns.map((col) => ({
+      ...col,
+      tasks: col.tasks.filter((task) => task._id !== taskId),
+    }));
     setColumns(updatedColumns);
-    await taskService.updateTask(draggableId, {
-      column: destination.droppableId,
-    });
+    setIsModalOpen(false);
   };
-
   return (
     <div>
-      <h1>Task Management</h1>
-      {/* Create Task Button */}
-      <button onClick={() => setIsModalOpen(true)}>Create Task</button>
+      <Header onLogout={handleLogout} />
       <div className="Parentdiv">
         <TaskBoard
           columns={columns}
-          onDragEnd={handleDragEnd}
+          setColumns={setColumns}
+          onOpenEditModal={handleOpenEditModal}
           onTaskEdit={handleTaskEdit}
-          onTaskDelete={handleTaskDelete}
+          onTaskDelete={async (taskId) => {
+            await taskService.deleteTask(taskId);
+            const updatedColumns = columns.map((col) => ({
+              ...col,
+              tasks: col.tasks.filter((task) => task._id !== taskId),
+            }));
+            setColumns(updatedColumns);
+          }}
         />
       </div>
-      {/* Task Creation Modal */}
       {isModalOpen && (
         <TaskModal
-          task={editTask} // Pass the task being edited to the modal
+          task={editTask}
           onClose={() => {
             setIsModalOpen(false);
-            setEditTask(null); // Clear the task being edited
+            setEditTask(null);
           }}
           onTaskCreated={handleTaskCreated}
           onTaskUpdated={handleTaskUpdated}
+          onTaskDeleted={handleTaskDeleted}
         />
       )}
     </div>

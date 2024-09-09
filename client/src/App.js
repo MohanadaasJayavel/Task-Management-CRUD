@@ -9,7 +9,6 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   return (
     <Router>
-      {/* Add ToastContainer to enable notifications */}
       <ToastContainer />
       <Auth>
         <Routes>
