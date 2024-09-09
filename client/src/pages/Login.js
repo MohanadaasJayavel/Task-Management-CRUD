@@ -58,7 +58,7 @@ const Login = () => {
         </form>
         <div className="divider">OR</div>
         <LoginSocialGoogle
-          client_id={process.env.google_client_id}
+          client_id="880149139013-tcgjtif3tpjskfudntl47684nv7g0gu5.apps.googleusercontent.com"
           access_type="offline"
           onResolve={({ provider, data }) => handleGoogleLoginSuccess(data)}
           onReject={(err) => console.log("Google login failed", err)}

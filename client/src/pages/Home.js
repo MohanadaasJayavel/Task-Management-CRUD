@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import logout_icon from "../icons/logout_icon.svg";
 
-const Header = ({ onLogout }) => {
+const Header = ({ onLogout,setIsModalOpen  }) => {
   const navigate = useNavigate();
 
   return (
@@ -136,7 +136,7 @@ const Home = () => {
   };
   return (
     <div>
-      <Header onLogout={handleLogout} />
+      <Header onLogout={handleLogout} setIsModalOpen={setIsModalOpen}/>
       <div className="Parentdiv">
         <TaskBoard
           columns={columns}
