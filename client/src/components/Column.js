@@ -20,5 +20,4 @@ const Column = ({ column }) => (
     ))}
   </div>
 );
-
 export default Column;

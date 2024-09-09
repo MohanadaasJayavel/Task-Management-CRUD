@@ -6,6 +6,7 @@ const getTasks = async () => {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
+  console.log("response from getalltakss", response);
   return response.json();
 };
 
@@ -21,6 +22,16 @@ const createTask = async (taskData) => {
   return await response.json();
 };
 
+const deleteTask = async (id) => {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return await response.json();
+};
 const updateTask = async (id, data) => {
   const response = await fetch(`${API_URL}/${id}`, {
     method: "PUT",
@@ -33,4 +44,4 @@ const updateTask = async (id, data) => {
   return response.json();
 };
 
-export default { getTasks,createTask, updateTask };
+export default { getTasks, createTask, updateTask, deleteTask };
